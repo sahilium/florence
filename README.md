@@ -1,10 +1,10 @@
 ## Florence
 
-[![Go Version](https://img.shields.io/badge/go-1.24+-00ADD8?logo=go)](https://go.dev/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Matrix](https://img.shields.io/badge/matrix-enabled-000000?logo=matrix)](https://matrix.org/)
-[![SQLite](https://img.shields.io/badge/storage-sqlite-003B57?logo=sqlite)](https://sqlite.org/)
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
+[![Go Version](https://img.shields.io/badge/go-1.24+-00ADD8?logo=go&style=for-the-badge)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![Matrix](https://img.shields.io/badge/matrix-enabled-000000?logo=matrix&style=for-the-badge)](https://matrix.org/)
+[![SQLite](https://img.shields.io/badge/storage-sqlite-003B57?logo=sqlite&style=for-the-badge)](https://sqlite.org/)
+[![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)]()
 
 A lightweight event ingestion and notification platform written in Go.
 
@@ -33,6 +33,7 @@ All incoming events are normalized into a common structure.
 
 ```go
 type Event struct {
+    ID        string
     Source    string
     Title     string
     Body      string
@@ -41,8 +42,8 @@ type Event struct {
     Timestamp time.Time
     Tags      []string
 }
-```
 
+Events carry deterministic IDs (e.g. `hn_12345`) for persistent deduplication.
 This abstraction allows any source to route events through any notification sink.
 
 ---
@@ -75,9 +76,8 @@ This abstraction allows any source to route events through any notification sink
 ### Prerequisites
 
 - Go 1.24+
-- Matrix account
-- Matrix room
-- Matrix access token
+- Matrix account and access token
+- Turso database (or libSQL-compatible server)
 
 ---
 
@@ -100,13 +100,7 @@ go mod tidy
 
 ### Configure Environment Variables
 
-Create a ".env" file:
-
-MATRIX_HOMESERVER=https://matrix-client.matrix.org
-MATRIX_ACCESS_TOKEN=your_access_token
-MATRIX_ROOM_ID=!roomid:matrix.org
-
-HN_MIN_SCORE=100
+Create a ".env" file, see [.env.example](.env.example) for an example.
 
 ---
 
@@ -122,10 +116,12 @@ go run ./cmd/daemon
 
 The daemon can publish notifications directly into Matrix rooms using the Matrix Client API.
 
+Events are routed dynamically: each event source publishes to its own Matrix room based on the `ROOM_*` environment variables.
+
 Current implementation supports:
 
 - Plain text notifications
-- Room-based delivery
+- Per-source room routing
 - Access token authentication
 
 ## Planned improvements:
@@ -133,7 +129,30 @@ Current implementation supports:
 - Rich formatting
 - Markdown rendering
 - Threaded notifications
-- Multiple room routing
+
+---
+
+## Database
+
+Florence uses Turso/libSQL for persistent storage.
+
+### Migrations
+
+Database migrations are managed by [Goose](https://github.com/pressly/goose) and stored in `migrations/`. Migrations run automatically on daemon startup.
+
+### Tables
+
+- `seen_events` — deterministic deduplication (keyed by event ID).
+- `source_state` — per-source polling cursors and state.
+- `events` — normalized event history for debugging.
+
+### Deduplication Flow
+
+```
+source → normalize event → check seen_events
+  → if seen: skip
+  → else: store event → send to sink → mark as seen
+```
 
 ---
 
@@ -151,8 +170,6 @@ Current implementation supports:
 
 ## Future Plans
 
-- SQLite persistence
-- Deduplication
 - Rule engine
 - AI summarization
 - Web dashboard

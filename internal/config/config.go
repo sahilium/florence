@@ -11,8 +11,12 @@ import (
 type Config struct {
 	MatrixHomeserver string
 	MatrixToken      string
-	MatrixRoomID     string
-	HNMinScore       int
+	Rooms            map[string]string
+
+	TursoDatabaseURL string
+	TursoAuthToken   string
+
+	HNMinScore int
 }
 
 func Load() Config {
@@ -26,7 +30,14 @@ func Load() Config {
 	return Config{
 		MatrixHomeserver: getEnv("MATRIX_HOMESERVER", ""),
 		MatrixToken:      getEnv("MATRIX_ACCESS_TOKEN", ""),
-		MatrixRoomID:     getEnv("MATRIX_ROOM_ID", ""),
+		Rooms: map[string]string{
+			"hackernews": os.Getenv("ROOM_HN"),
+			"sms":        os.Getenv("ROOM_SMS"),
+			"lobsters":   os.Getenv("ROOM_LOBSTERS"),
+			"github":     os.Getenv("ROOM_GITHUB"),
+		},
+		TursoDatabaseURL: getEnv("TURSO_DATABASE_URL", ""),
+		TursoAuthToken:   getEnv("TURSO_AUTH_TOKEN", ""),
 		HNMinScore:       score,
 	}
 }

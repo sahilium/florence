@@ -61,8 +61,9 @@ func (s *Source) Fetch() ([]event.Event, error) {
 
 		if item.Score >= s.MinScore {
 			events = append(events, event.Event{
+				ID:        fmt.Sprintf("hn_%d", item.ID),
 				Source:    "hackernews",
-				Title:     fmt.Sprintf("🔥 [%d] %s", item.Score, item.Title),
+				Title:     fmt.Sprintf("[%d] %s", item.Score, item.Title),
 				URL:       item.URL,
 				Severity:  "info",
 				Timestamp: time.Now(),
